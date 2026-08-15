@@ -1,0 +1,28 @@
+{application, velora_tiles_filter, [
+    {description, "Emergence filter: satellite/aerial imagery tiles, served by velora"},
+    {vsn, "0.1.0"},
+    {registered, [velora_tiles_filter_sup, velora_tiles_filter_server]},
+    {mod, {velora_tiles_filter_app, []}},
+    {applications, [
+        kernel,
+        stdlib,
+        inets,
+        ssl,
+        cowboy,
+        em_filter
+    ]},
+    {env, [
+        {pop_port,   9210},
+        {query_port, 9211},
+        {pop_seeds,  []},
+        {velora_url, "http://127.0.0.1:8080/agent/query"}
+    ]},
+    {modules, [
+        velora_tiles_filter_app,
+        velora_tiles_filter_sup,
+        velora_tiles_filter_server,
+        velora_tiles_filter_handler
+    ]},
+    {licenses, ["Apache-2.0"]},
+    {links, [{"GitHub", "https://github.com/EmergenceSystem/velora_tiles_filter"}]}
+]}.
