@@ -17,16 +17,22 @@ start_link() ->
 init([]) ->
     {ok, undefined}.
 
-handle_call({http_query, Query}, _From, State) ->
-    Reply = try
-        Items  = velora_tiles_filter_handler:query(Query),
-        Result = iolist_to_binary(json:encode(Items)),
-        {ok, Result}
-    catch E:R ->
-        logger:error("[velora_tiles_filter] handler error ~p:~p", [E, R]),
-        {error, handler_failed}
-    end,
-    {reply, Reply, State};
+handle_call({http_query, Query}, From, State) ->
+    %% Run the (blocking, httpc) forward in a worker so the gen_server stays free
+    %% to accept concurrent queries; reply asynchronously. Doing the forward
+    %% inline in handle_call serialises every query through this one process, so
+    %% under mesh query load a single in-flight forward stalls all others.
+    _ = spawn(fun() ->
+        Reply = try
+            Items = velora_tiles_filter_handler:query(Query),
+            {ok, iolist_to_binary(json:encode(Items))}
+        catch E:R ->
+            logger:error("[velora_tiles_filter] handler error ~p:~p", [E, R]),
+            {error, handler_failed}
+        end,
+        gen_server:reply(From, Reply)
+    end),
+    {noreply, State};
 handle_call(_Req, _From, State) ->
     {reply, {error, unknown_call}, State}.
 
